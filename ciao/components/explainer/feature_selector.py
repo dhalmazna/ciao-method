@@ -2,8 +2,7 @@
 Main CIAO explainer implementation using Lightning framework.
 """
 
-from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import networkx as nx
 import numpy as np
@@ -11,8 +10,7 @@ import torch
 from sklearn.feature_selection import mutual_info_classif
 
 from ciao.components.obfuscation.base import BaseObfuscation
-from ciao.components.segmentation.base import BaseSegmentation
-from ciao.typing import Classifier, ExplanationResult, Image, SegmentMask
+from ciao.typing import Classifier, Image, SegmentMask
 
 
 class CIAOFeatureSelector:
@@ -66,16 +64,21 @@ class CIAOFeatureSelector:
         obfuscator: BaseObfuscation,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Create surrogate dataset as described in the paper."""
-        # Convert to numpy if tensor
-        if hasattr(image, "numpy"):
-            image_np = image.numpy()
+        # Convert to numpy array for processing
+        if isinstance(image, torch.Tensor):
+            # Move to CPU and convert to numpy
+            image_np = image.detach().cpu().numpy()
+            if len(image_np.shape) == 4:  # Remove batch dimension if present
+                image_np = image_np.squeeze(0)
+            if image_np.shape[0] == 3:  # CHW to HWC
+                image_np = np.transpose(image_np, (1, 2, 0))
         else:
             image_np = image
 
-        # Get original prediction
-        original_pred = self._get_model_prediction(image_np)
+        # Get original prediction (pass original image, not numpy)
+        original_pred = self._get_model_prediction(image)
         if self.target_class is None:
-            self.target_class = original_pred.argmax().item()
+            self.target_class = int(original_pred.argmax().item())
 
         # Get all segments
         segment_ids = np.unique(segments)
@@ -109,10 +112,10 @@ class CIAOFeatureSelector:
             obfuscated_pred = self._get_model_prediction(obfuscated_image)
 
             # Calculate delta
-            delta = abs(
-                original_pred[self.target_class].item()
-                - obfuscated_pred[self.target_class].item()
-            )
+            target_idx = int(self.target_class)
+            orig_score = original_pred[target_idx].item()
+            obfus_score = obfuscated_pred[target_idx].item()
+            delta = abs(orig_score - obfus_score)
             deltas.append(delta)
             X.append(feature_vector)
 
@@ -121,11 +124,15 @@ class CIAOFeatureSelector:
         for delta in deltas:
             y.append(1 if delta >= delta_threshold else 0)
 
+        # Convert to numpy arrays
+        X_array = np.array(X)
+        y_array = np.array(y)
+
         # Adapt eta if enabled
         if self.adaptive_eta:
-            self.eta = self._compute_adaptive_eta(X, y, deltas)
+            self.eta = self._compute_adaptive_eta(X_array, y_array, deltas)
 
-        return np.array(X), np.array(y)
+        return X_array, y_array
 
     def _compute_adaptive_eta(
         self, X: np.ndarray, y: np.ndarray, deltas: List[float]
@@ -158,7 +165,7 @@ class CIAOFeatureSelector:
         adaptive_eta = delta_factor * variance_factor * balance_factor * 0.7
         adaptive_eta = max(0.005, min(adaptive_eta, self.base_eta))
 
-        return adaptive_eta
+        return float(adaptive_eta)
 
     def _get_local_group(
         self, center_segment: int, radius: int, adjacency_graph: nx.Graph
@@ -235,20 +242,40 @@ class CIAOFeatureSelector:
 
         return feature_groups
 
-    def _get_model_prediction(self, image: np.ndarray) -> torch.Tensor:
+    def _get_model_prediction(self, image: Image) -> torch.Tensor:
         """Get model prediction for image."""
-        # Convert to tensor and add batch dimension
+        # Convert to tensor if numpy array
         if isinstance(image, np.ndarray):
             if len(image.shape) == 3:  # H, W, C
-                image = torch.from_numpy(image).permute(2, 0, 1).float()
-            image = image.unsqueeze(0)  # Add batch dimension
+                image_tensor = torch.from_numpy(image).permute(2, 0, 1).float()
+            else:
+                image_tensor = torch.from_numpy(image).float()
+            image_tensor = image_tensor.unsqueeze(0)  # Add batch dimension
+        elif isinstance(image, torch.Tensor):
+            image_tensor = image.clone()
+            if len(image_tensor.shape) == 3:  # C, H, W
+                image_tensor = image_tensor.unsqueeze(0)  # Add batch dimension
+        else:
+            raise TypeError(f"Unsupported image type: {type(image)}")
 
         # Ensure image is in correct device
-        device = next(self.model.parameters()).device
-        image = image.to(device)
+        try:
+            # Try to get device from model parameters
+            params = getattr(self.model, "parameters", None)
+            if params is not None:
+                device = next(params()).device
+                image_tensor = image_tensor.to(device)
+            else:
+                # Try direct device attribute
+                device = getattr(self.model, "device", None)
+                if device is not None:
+                    image_tensor = image_tensor.to(device)
+        except (StopIteration, AttributeError, TypeError):
+            # Model has no parameters or device info, use CPU
+            pass
 
         with torch.no_grad():
-            prediction = self.model(image)
+            prediction = self.model(image_tensor)
             if len(prediction.shape) > 1:
                 prediction = torch.softmax(prediction, dim=1)
             else:
@@ -333,7 +360,8 @@ class CIAOFeatureSelector:
                 if score > best_score:
                     best_score = score
                     best_neighbor = neighbor_idx
-            except:
+            except Exception:
+                # Skip this neighbor if mutual info computation fails
                 continue
 
         return best_neighbor, best_score

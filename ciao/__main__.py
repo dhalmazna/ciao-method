@@ -7,7 +7,6 @@ from pathlib import Path
 from random import randint
 
 import hydra
-import torch
 from lightning import seed_everything
 from omegaconf import DictConfig, OmegaConf
 
@@ -58,7 +57,7 @@ def main(config: DictConfig) -> None:
     run_output_dir = output_dir / f"ciao_explanations_{timestamp}"
     run_output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Starting CIAO explanation generation...")
+    print("Starting CIAO explanation generation...")
     print(f"Variant: {config.variant}")
     print(f"Segmentation: {config.ciao.segmentation._target_}")
     print(f"Obfuscation: {config.ciao.obfuscation._target_}")

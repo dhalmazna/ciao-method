@@ -2,7 +2,6 @@
 Data module for CIAO explanations using counterfactuals datasets.
 """
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from hydra.utils import instantiate
@@ -12,8 +11,6 @@ from torch.utils.data import DataLoader
 
 if TYPE_CHECKING:
     from rationai.mlkit.data.datasets import MetaTiledSlides
-
-from ciao.typing import ExplanationResult
 
 PartialConf: TypeAlias = DictConfig
 Sample = tuple  # Image, label, metadata tuple

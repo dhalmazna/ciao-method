@@ -87,9 +87,8 @@ def make_classifier(
 
     # Default model path if not provided
     if model_path is None:
-        model_path = Path(
-            f"/mnt/data/rationai/data/Counterfactuals/models/{variant}_classifier.pt"
-        )
+        base_path = "/mnt/data/rationai/data/Counterfactuals/models"
+        model_path = Path(f"{base_path}/{variant}_classifier.pt")
 
     classifier = load_pretrained_classifier(variant, model_path)
     return classifier

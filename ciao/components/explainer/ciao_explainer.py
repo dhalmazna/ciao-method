@@ -3,7 +3,7 @@ Main CIAO explainer class following Lightning framework.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +12,7 @@ import torch
 from ciao.components.explainer.feature_selector import CIAOFeatureSelector
 from ciao.components.obfuscation.base import BaseObfuscation
 from ciao.components.segmentation.base import BaseSegmentation
-from ciao.typing import Classifier, ExplanationResult, Image, SegmentMask
+from ciao.typing import Classifier, ExplanationResult, Image
 
 
 class CIAOExplainer:
@@ -75,9 +75,14 @@ class CIAOExplainer:
         Returns:
             Dictionary containing explanation results
         """
-        # Convert to numpy if tensor
-        if hasattr(image, "numpy"):
-            image_np = image.numpy()
+        # Convert to numpy array for segmentation
+        if isinstance(image, torch.Tensor):
+            # Move to CPU and convert to numpy
+            image_np = image.detach().cpu().numpy()
+            if len(image_np.shape) == 4:  # Remove batch dimension if present
+                image_np = image_np.squeeze(0)
+            if image_np.shape[0] == 3:  # CHW to HWC
+                image_np = np.transpose(image_np, (1, 2, 0))
         else:
             image_np = image
 
@@ -89,7 +94,7 @@ class CIAOExplainer:
             self.feature_selector.target_class = target_class
 
         # Get model prediction for original image
-        original_prediction = self.feature_selector._get_model_prediction(image_np)
+        original_prediction = self.feature_selector._get_model_prediction(image)
         predicted_class = original_prediction.argmax().item()
         confidence = original_prediction.max().item()
 

@@ -2,7 +2,7 @@
 CIAO typing definitions
 """
 
-from typing import Any, Dict, List, Protocol, Tuple, Union
+from typing import Any, Dict, List, Protocol, Union
 
 import numpy as np
 import torch
