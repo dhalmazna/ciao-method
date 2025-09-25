@@ -20,13 +20,14 @@ ciao:
     target_class: null
     use_fallback_groups: true
     max_group_size_ratio: 0.02
+    max_display_groups: 30
 
 data:
   batch_size: 1 # CIAO processes single images
   num_workers: 4
 
 explanation:
-  num_images: 1 # Number of images to explain
+  num_images: 5 # Number of images to explain
   output_dir: ./explanations
   save_visualizations: true
   save_heatmaps: true
