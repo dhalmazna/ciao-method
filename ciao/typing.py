@@ -15,9 +15,9 @@ SegmentMask = np.ndarray
 ExplanationResult = Dict[str, Any]
 FeatureGroups = List[List[int]]
 
-# Medical imaging dataset types
-Sample = tuple[torch.Tensor, torch.Tensor]  # (image, label)
-PredictSample = tuple[torch.Tensor, Dict[str, Any]]  # (image, metadata)
+# Medical imaging dataset types for CIAO
+Sample = tuple[torch.Tensor, torch.Tensor, Any]  # (image, label, metadata)
+PredictSample = tuple[torch.Tensor, None, Any]  # (image, None, metadata)
 
 
 class Segmenter(Protocol):

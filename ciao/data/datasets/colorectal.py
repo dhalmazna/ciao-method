@@ -76,22 +76,20 @@ class _ColorectalCancerSlideTiles(Dataset[Sample]):
         return len(self.slide_tiles)
 
     def __getitem__(self, idx: int) -> Sample:
-        # Handle different return formats from OpenSlideTilesDataset
-        slide_data = self.slide_tiles[idx]
+        # OpenSlideTilesDataset only returns the image as NDArray
+        image = self.slide_tiles[idx]  # This is just the numpy array image
 
-        if len(slide_data) == 2:
-            image, metadata = slide_data
-        elif len(slide_data) == 3:
-            image, metadata, _ = slide_data
-        else:
-            image = slide_data[0]
-            metadata = slide_data[1] if len(slide_data) > 1 else {}
+        # Get metadata from the tiles DataFrame
+        tile_row = self.slide_tiles.tiles.iloc[idx]
+        metadata = tile_row.to_dict()
 
         if self.transforms is not None:
             image = self.transforms(image=image)["image"]
         else:
             image = self.to_tensor(image=image)["image"]
 
+        # Get label from tile metadata
         label_value = metadata.get("cancer", 0)
         label = torch.tensor(label_value, dtype=torch.float32).unsqueeze(0)
-        return image, label
+        # Return image, label, metadata for CIAO main script
+        return image, label, metadata
