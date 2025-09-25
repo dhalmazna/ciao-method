@@ -30,6 +30,9 @@ class CIAOExplainer:
         radius_range: List[int] = [1, 2],
         adaptive_eta: bool = True,
         target_class: Optional[int] = None,
+        use_fallback_groups: bool = True,
+        max_group_size_ratio: float = 0.05,
+        max_display_groups: int = 50,
     ):
         """
         Initialize CIAO explainer.
@@ -42,10 +45,14 @@ class CIAOExplainer:
             radius_range: List of radii for local groups
             adaptive_eta: Whether to adapt eta threshold
             target_class: Class to explain (None for top prediction)
+            use_fallback_groups: Whether to use fallback grouping when no groups form
+            max_group_size_ratio: Maximum group size as ratio of total segments
+            max_display_groups: Maximum number of groups to display in visualization
         """
         self.classifier = classifier
         self.segmenter = segmenter
         self.obfuscator = obfuscator
+        self.max_display_groups = max_display_groups
 
         # Initialize feature selector
         self.feature_selector = CIAOFeatureSelector(
@@ -54,6 +61,8 @@ class CIAOExplainer:
             eta=eta,
             radius_range=radius_range,
             adaptive_eta=adaptive_eta,
+            use_fallback_groups=use_fallback_groups,
+            max_group_size_ratio=max_group_size_ratio,
         )
 
     def explain(
@@ -170,36 +179,64 @@ class CIAOExplainer:
         self, result: ExplanationResult, output_path: Path
     ) -> None:
         """Create and save CIAO visualization."""
-        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        # Create figure with space for colorbar
+        fig = plt.figure(figsize=(18, 5))
+
+        # Create grid layout: 3 main plots + space for colorbar
+        gs = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 0.05], wspace=0.3)
+        axes = [fig.add_subplot(gs[0, i]) for i in range(3)]
+        cbar_ax = fig.add_subplot(gs[0, 3])
 
         # Original image
         axes[0].imshow(result["original_image"])
         axes[0].set_title(
-            f"Original\nPred: {result['predicted_class']} "
-            f"(conf: {result['confidence']:.3f})"
+            f"Original Image\nPred: Class {result['predicted_class']} "
+            f"(conf: {result['confidence']:.3f})",
+            fontsize=12,
+            fontweight="bold",
         )
         axes[0].axis("off")
 
-        # Segmentation
+        # Segmentation with better styling
         axes[1].imshow(result["segments"], cmap="tab20")
-        axes[1].set_title(f"Segmentation\n{result['n_segments']} segments")
+        axes[1].set_title(
+            f"Superpixel Segmentation\n{result['n_segments']} segments",
+            fontsize=12,
+            fontweight="bold",
+        )
         axes[1].axis("off")
 
-        # Feature groups heatmap
-        heatmap = self._create_heatmap(result)
+        # Feature groups heatmap with improved visualization
+        heatmap, n_displayed = self._create_improved_heatmap(result)
+
+        # Show original image as background
         axes[2].imshow(result["original_image"])
-        axes[2].imshow(heatmap, alpha=0.6, cmap="Reds")
+
+        # Overlay heatmap with better transparency and colormap
+        im = axes[2].imshow(heatmap, alpha=0.7, cmap="YlOrRd", vmin=0, vmax=1)
+
         axes[2].set_title(
-            f"CIAO Explanation\n{result['n_feature_groups']} groups, "
-            f"η={result['eta_used']:.4f}"
+            f"Top {n_displayed} Important Groups\n"
+            f"(of {result['n_feature_groups']} total, η={result['eta_used']:.4f})",
+            fontsize=12,
+            fontweight="bold",
         )
         axes[2].axis("off")
 
-        plt.tight_layout()
+        # Add colorbar with proper labels
+        cbar = plt.colorbar(im, cax=cbar_ax)
+        cbar.set_label("Importance\nScore", rotation=270, labelpad=20, fontsize=11)
+        cbar.set_ticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        cbar.set_ticklabels(["Low", "0.2", "0.4", "0.6", "0.8", "High"])
+
+        # Improve overall layout
+        plt.suptitle(
+            "CIAO Explainability Analysis", fontsize=16, fontweight="bold", y=1.02
+        )
 
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close()
 
     def _create_heatmap(self, result: ExplanationResult) -> np.ndarray:
@@ -220,3 +257,47 @@ class CIAOExplainer:
                 importance_map[mask] = importance
 
         return importance_map
+
+    def _create_improved_heatmap(
+        self, result: ExplanationResult
+    ) -> tuple[np.ndarray, int]:
+        """Create improved importance heatmap showing only most important groups."""
+        segments = result["segments"]
+        feature_groups = result["feature_groups"]
+
+        # Limit number of groups to display for cleaner visualization
+        n_display = min(len(feature_groups), self.max_display_groups)
+        display_groups = feature_groups[:n_display]
+
+        # Create importance map
+        importance_map = np.zeros_like(segments, dtype=float)
+
+        # Calculate group sizes for importance weighting
+        group_sizes = []
+        for group in display_groups:
+            size = sum(np.sum(segments == segment_id) for segment_id in group)
+            group_sizes.append(size)
+
+        # Normalize group sizes
+        if group_sizes:
+            max_size = max(group_sizes)
+            normalized_sizes = [size / max_size for size in group_sizes]
+        else:
+            normalized_sizes = []
+
+        # Assign importance values to segments with better scaling
+        for i, group in enumerate(display_groups):
+            # Combine order-based importance with size-based weighting
+            order_importance = (
+                1.0 - (i / len(display_groups)) * 0.6
+            )  # Less aggressive decay
+            size_weight = 0.3 + 0.7 * normalized_sizes[i]  # Size contributes 30-100%
+
+            # Final importance combines both factors
+            importance = order_importance * size_weight
+
+            for segment_id in group:
+                mask = segments == segment_id
+                importance_map[mask] = importance
+
+        return importance_map, n_display
