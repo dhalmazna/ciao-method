@@ -1,0 +1,7 @@
+defaults:
+  - /data/transforms@transforms: train
+
+_target_: torchvision.datasets.CIFAR10
+root: ./data
+train: true
+download: true

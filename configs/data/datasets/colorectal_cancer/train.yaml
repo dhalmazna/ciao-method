@@ -1,0 +1,9 @@
+defaults:
+  - /data/transforms@transforms: train
+
+_target_: ciao.data.datasets.ColorectalCancer
+uris:
+  [
+    "mlflow-artifacts:/74/6a8ca4d2afc24ba682a3b53328a675db/artifacts/Colorectal Cancer - train (small tiles)",
+  ]
+cancer_threshold: 0.01

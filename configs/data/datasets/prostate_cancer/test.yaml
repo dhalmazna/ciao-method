@@ -1,7 +1,7 @@
 defaults:
   - /data/transforms@transforms: test
 
-_target_: counterfactuals.data.datasets.ProstateCancer
+_target_: ciao.data.datasets.ProstateCancer
 uris:
   [
     "mlflow-artifacts:/65/2638ce544c6f4a9d92328cffc5bb00cc/artifacts/Prostate - test",

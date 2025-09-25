@@ -1,0 +1,36 @@
+defaults:
+  - hydra: default
+  - logger: mlflow
+  - /data/datasets@data.train: cifar10/train
+  - /data/datasets@data.val: cifar10/val
+  - /data/datasets@data.test: cifar10/test
+  - /ciao/segmentation: superpixel
+  - /ciao/obfuscation: blur
+  - _self_
+
+seed: ${random_seed:}
+mode: explain
+variant: cifar10
+
+ciao:
+  explainer_params:
+    eta: 0.01
+    radius_range: [1, 2]
+    adaptive_eta: true
+    target_class: null
+
+data:
+  batch_size: 1 # CIAO processes single images
+  num_workers: 4
+
+explanation:
+  num_images: 5 # Number of images to explain
+  output_dir: ./explanations
+  save_visualizations: true
+  save_heatmaps: true
+
+# Model configuration for CIFAR-10
+model:
+  name: resnet18
+  num_classes: 10 # CIFAR-10 has 10 classes
+  pretrained: true

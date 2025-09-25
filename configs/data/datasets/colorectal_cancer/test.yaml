@@ -1,0 +1,9 @@
+defaults:
+  - /data/transforms@transforms: test
+
+_target_: ciao.data.datasets.ColorectalCancer
+uris:
+  [
+    "mlflow-artifacts:/74/a22b4b2b54ed474fa43daa2dfda16c43/artifacts/Colorectal Cancer - test (small tiles)",
+  ]
+cancer_threshold: 0.01

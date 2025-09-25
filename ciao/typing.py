@@ -2,7 +2,7 @@
 CIAO typing definitions
 """
 
-from typing import Any, Dict, List, Protocol, Union
+from typing import Any, Dict, List, Protocol, Tuple, Union
 
 import numpy as np
 import torch
@@ -14,6 +14,10 @@ Image = Union[ImageTensor, ImageArray]
 SegmentMask = np.ndarray
 ExplanationResult = Dict[str, Any]
 FeatureGroups = List[List[int]]
+
+# Medical imaging dataset types
+Sample = tuple[torch.Tensor, torch.Tensor]  # (image, label)
+PredictSample = tuple[torch.Tensor, Dict[str, Any]]  # (image, metadata)
 
 
 class Segmenter(Protocol):

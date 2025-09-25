@@ -1,0 +1,45 @@
+defaults:
+  - hydra: default
+  - logger: mlflow
+  - /data/datasets@data.train: colorectal_cancer/train
+  - /data/datasets@data.val: colorectal_cancer/val
+  - /data/datasets@data.test: colorectal_cancer/test
+  - /ciao/segmentation: superpixel
+  - /ciao/obfuscation: blur
+  - _self_
+
+seed: ${random_seed:}
+mode: explain
+variant: colorectal
+
+ciao:
+  explainer_params:
+    eta: 0.01
+    radius_range: [1, 2]
+    adaptive_eta: true
+    target_class: null
+
+data:
+  batch_size: 1 # CIAO processes single images
+  num_workers: 4
+
+explanation:
+  num_images: 5 # Number of images to explain
+  output_dir: ./explanations
+  save_visualizations: true
+  save_heatmaps: true
+
+# Model configuration for colorectal cancer
+model:
+  name: resnet18
+  num_classes: 2 # Binary classification
+  pretrained: true
+
+metadata:
+  experiment_name: CIAO_Explanations
+  run_name: "CIAO_${variant}_${ciao.segmentation._target_}_${ciao.obfuscation._target_}"
+  description: "CIAO explanations for colorectal cancer images"
+  hyperparams:
+    eta: ${ciao.explainer_params.eta}
+    radius_range: ${ciao.explainer_params.radius_range}
+    adaptive_eta: ${ciao.explainer_params.adaptive_eta}
