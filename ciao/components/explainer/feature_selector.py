@@ -265,6 +265,14 @@ class CIAOFeatureSelector:
         else:
             raise TypeError(f"Unsupported image type: {type(image)}")
 
+        # Ensure tensor is float32 (ResNet expects float, not uint8)
+        if image_tensor.dtype != torch.float32:
+            image_tensor = image_tensor.float()
+        
+        # Normalize to [0, 1] range if values are in [0, 255] range
+        if image_tensor.max() > 1.0:
+            image_tensor = image_tensor / 255.0
+
         # Ensure image is in correct device
         try:
             # Try to get device from model parameters
@@ -280,12 +288,6 @@ class CIAOFeatureSelector:
         except (StopIteration, AttributeError, TypeError):
             # Model has no parameters or device info, use CPU
             pass
-
-        # Debug information
-        print(f"DEBUG: Image tensor shape: {image_tensor.shape}")
-        print(f"DEBUG: Image tensor dtype: {image_tensor.dtype}")
-        min_val, max_val = image_tensor.min().item(), image_tensor.max().item()
-        print(f"DEBUG: Image tensor range: {min_val:.3f} to {max_val:.3f}")
 
         with torch.no_grad():
             prediction = self.model(image_tensor)
