@@ -30,7 +30,7 @@ explanation:
   save_heatmaps: true
 
 metadata:
-  experiment_name: CIAO_Explanations
+  experiment_name: Explainability
   run_name: "CIAO_${variant}_${ciao.segmentation._target_}_${ciao.obfuscation._target_}"
   description: "CIAO explanations for medical images"
   hyperparams:
