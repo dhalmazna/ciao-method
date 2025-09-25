@@ -240,7 +240,7 @@ class CIAOFeatureSelector:
         # Convert to tensor and add batch dimension
         if isinstance(image, np.ndarray):
             if len(image.shape) == 3:  # H, W, C
-                image = torch.from_tensor(image).permute(2, 0, 1).float()
+                image = torch.from_numpy(image).permute(2, 0, 1).float()
             image = image.unsqueeze(0)  # Add batch dimension
 
         # Ensure image is in correct device
