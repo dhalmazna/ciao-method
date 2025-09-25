@@ -253,8 +253,15 @@ class CIAOFeatureSelector:
             image_tensor = image_tensor.unsqueeze(0)  # Add batch dimension
         elif isinstance(image, torch.Tensor):
             image_tensor = image.clone()
-            if len(image_tensor.shape) == 3:  # C, H, W
+            if len(image_tensor.shape) == 3:  # Could be C,H,W or H,W,C
+                # Check if it's H,W,C (channels last) and convert to C,H,W
+                if image_tensor.shape[2] == 3:  # H,W,C format
+                    image_tensor = image_tensor.permute(2, 0, 1)
                 image_tensor = image_tensor.unsqueeze(0)  # Add batch dimension
+            elif len(image_tensor.shape) == 4:  # Already has batch dimension
+                # Check if it's B,H,W,C and convert to B,C,H,W
+                if image_tensor.shape[3] == 3:  # B,H,W,C format
+                    image_tensor = image_tensor.permute(0, 3, 1, 2)
         else:
             raise TypeError(f"Unsupported image type: {type(image)}")
 
