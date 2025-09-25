@@ -268,7 +268,7 @@ class CIAOFeatureSelector:
         # Ensure tensor is float32 (ResNet expects float, not uint8)
         if image_tensor.dtype != torch.float32:
             image_tensor = image_tensor.float()
-        
+
         # Normalize to [0, 1] range if values are in [0, 255] range
         if image_tensor.max() > 1.0:
             image_tensor = image_tensor / 255.0
