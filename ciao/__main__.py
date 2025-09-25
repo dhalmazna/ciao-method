@@ -7,6 +7,7 @@ from pathlib import Path
 from random import randint
 
 import hydra
+import mlflow
 from lightning import seed_everything
 from omegaconf import DictConfig, OmegaConf
 
@@ -117,6 +118,58 @@ def main(config: DictConfig) -> None:
         OmegaConf.save(summary, f)
 
     print(f"📋 Summary saved to: {summary_path}")
+
+    # Log artifacts to MLflow
+    try:
+        print("🔄 Logging artifacts to MLflow...")
+        
+        # Set experiment name from config
+        experiment_name = config.metadata.get(
+            "experiment_name", "Explainability"
+        )
+        mlflow.set_experiment(experiment_name)
+        
+        # Start MLflow run
+        run_name = config.metadata.get(
+            "run_name", f"CIAO_{config.variant}_{timestamp}"
+        )
+        with mlflow.start_run(run_name=run_name):
+            # Log hyperparameters
+            mlflow.log_param("variant", config.variant)
+            mlflow.log_param(
+                "segmentation_method", config.ciao.segmentation._target_
+            )
+            mlflow.log_param(
+                "obfuscation_method", config.ciao.obfuscation._target_
+            )
+            mlflow.log_param("eta", config.ciao.explainer_params.eta)
+            mlflow.log_param("num_images", config.explanation.num_images)
+            mlflow.log_param("seed", config.seed)
+            
+            # Log metrics
+            n_explanations = len(explanations)
+            avg_feature_groups = (
+                sum(exp['n_feature_groups'] for exp in explanations)
+                / n_explanations
+            )
+            avg_confidence = (
+                sum(exp['confidence'] for exp in explanations)
+                / n_explanations
+            )
+            mlflow.log_metric("avg_feature_groups", avg_feature_groups)
+            mlflow.log_metric("avg_confidence", avg_confidence)
+            mlflow.log_metric("total_explanations", n_explanations)
+            
+            # Log all output files as artifacts
+            mlflow.log_artifacts(
+                str(run_output_dir), artifact_path="explanations"
+            )
+            
+        print(f"✅ Artifacts logged to MLflow experiment '{experiment_name}'")
+        
+    except Exception as e:
+        print(f"⚠️  MLflow logging failed: {e}")
+        print("Continuing without MLflow logging...")
 
 
 if __name__ == "__main__":
