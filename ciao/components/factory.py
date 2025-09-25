@@ -5,7 +5,6 @@ Factory for creating CIAO components following counterfactuals pattern.
 from pathlib import Path
 from typing import Literal, Optional, Union
 
-import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig, ListConfig
 
@@ -75,7 +74,7 @@ def make_classifier(
 ) -> Classifier:
     """
     Create classifier for CIAO explanations.
-    Uses the same classifiers as counterfactuals for consistency.
+    Uses standalone classifier implementation.
 
     Args:
         variant: Dataset variant (prostate or colorectal)
@@ -84,9 +83,7 @@ def make_classifier(
     Returns:
         Classifier model
     """
-    # Import here to avoid circular imports
-    from counterfactuals.components.classifiers import ProvGigapathClassifier
-    from counterfactuals.modeling.binary_classifier import BinaryClassifier
+    from ciao.components.classifiers import load_pretrained_classifier
 
     # Default model path if not provided
     if model_path is None:
@@ -94,21 +91,7 @@ def make_classifier(
             f"/mnt/data/rationai/data/Counterfactuals/models/{variant}_classifier.pt"
         )
 
-    classifier = ProvGigapathClassifier(
-        backbone=ProvGigapathClassifier.load_backbone(),
-        decode_head=BinaryClassifier(in_features=1536),
-        lr=1e-5,
-    )
-
-    # Load weights
-    weights = torch.load(
-        str(model_path),
-        map_location="cpu",
-        weights_only=True,
-    )
-    classifier.load_state_dict(weights["state_dict"], strict=False)
-
-    classifier.eval()
+    classifier = load_pretrained_classifier(variant, model_path)
     return classifier
 
 
