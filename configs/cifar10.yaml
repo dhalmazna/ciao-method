@@ -14,10 +14,11 @@ variant: cifar10
 
 ciao:
   explainer_params:
-    eta: 0.01
+    eta: 0.005
     radius_range: [1, 2]
     adaptive_eta: true
     target_class: null
+    use_fallback_groups: true
 
 data:
   batch_size: 1 # CIAO processes single images

@@ -30,6 +30,8 @@ class CIAOExplainer:
         radius_range: List[int] = [1, 2],
         adaptive_eta: bool = True,
         target_class: Optional[int] = None,
+        use_fallback_groups: bool = True,
+        max_group_size_ratio: float = 0.05,
     ):
         """
         Initialize CIAO explainer.
@@ -42,6 +44,8 @@ class CIAOExplainer:
             radius_range: List of radii for local groups
             adaptive_eta: Whether to adapt eta threshold
             target_class: Class to explain (None for top prediction)
+            use_fallback_groups: Whether to use fallback grouping when no groups form
+            max_group_size_ratio: Maximum group size as ratio of total segments
         """
         self.classifier = classifier
         self.segmenter = segmenter
@@ -54,6 +58,8 @@ class CIAOExplainer:
             eta=eta,
             radius_range=radius_range,
             adaptive_eta=adaptive_eta,
+            use_fallback_groups=use_fallback_groups,
+            max_group_size_ratio=max_group_size_ratio,
         )
 
     def explain(

@@ -14,17 +14,19 @@ variant: prostate # prostate or colorectal
 
 ciao:
   explainer_params:
-    eta: 0.01
-    radius_range: [1, 2]
+    eta: 0.03
+    radius_range: [1]
     adaptive_eta: true
     target_class: null
+    use_fallback_groups: true
+    max_group_size_ratio: 0.02
 
 data:
   batch_size: 1 # CIAO processes single images
   num_workers: 4
 
 explanation:
-  num_images: 5 # Number of images to explain
+  num_images: 1 # Number of images to explain
   output_dir: ./explanations
   save_visualizations: true
   save_heatmaps: true
