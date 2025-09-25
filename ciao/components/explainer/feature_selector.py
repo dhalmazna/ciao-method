@@ -135,8 +135,6 @@ class CIAOFeatureSelector:
 
             # Calculate delta
             target_idx = int(self.target_class)
-            
-
 
             # Handle both single value and multi-class predictions
             if original_pred.numel() == 1:
@@ -280,17 +278,19 @@ class CIAOFeatureSelector:
 
             # Grow group iteratively with maximum size limit
             iteration = 0
-            max_group_size = max(3, int(len(segment_ids) * self.max_group_size_ratio))  # Configurable max ratio
+            max_group_size = max(
+                3, int(len(segment_ids) * self.max_group_size_ratio)
+            )  # Configurable max ratio
             while True:
                 iteration += 1
-                
+
                 # Stop if group is getting too large
                 if len(current_group) >= max_group_size:
                     logger.debug(
                         f"Group {len(feature_groups)}: Reached max size {max_group_size} (iteration {iteration})"
                     )
                     break
-                
+
                 neighbors = self._get_group_neighbors(
                     current_group, segment_ids, adjacency_graph, remaining_features
                 )
@@ -404,7 +404,9 @@ class CIAOFeatureSelector:
                 logger.debug(f"Multi-class probabilities: {prediction}")
             else:
                 # Binary classification - convert single sigmoid output to 2-class probabilities
-                sigmoid_output = torch.sigmoid(raw_prediction)  # Keep batch dimension for now
+                sigmoid_output = torch.sigmoid(
+                    raw_prediction
+                )  # Keep batch dimension for now
                 # Create 2-class probability distribution: [P(class=0), P(class=1)]
                 prediction = torch.cat([1 - sigmoid_output, sigmoid_output], dim=1)
                 logger.debug(
@@ -540,7 +542,9 @@ class CIAOFeatureSelector:
         fallback_group.add(seed_segment_id)
 
         # Add adjacent segments up to a reasonable size
-        max_fallback_size = max(3, int(len(segment_ids) * self.max_group_size_ratio * 2))  # Slightly larger for fallback
+        max_fallback_size = max(
+            3, int(len(segment_ids) * self.max_group_size_ratio * 2)
+        )  # Slightly larger for fallback
         added_segments = {seed_segment_id}
 
         for _ in range(max_fallback_size - 1):
