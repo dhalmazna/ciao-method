@@ -281,6 +281,12 @@ class CIAOFeatureSelector:
             # Model has no parameters or device info, use CPU
             pass
 
+        # Debug information
+        print(f"DEBUG: Image tensor shape: {image_tensor.shape}")
+        print(f"DEBUG: Image tensor dtype: {image_tensor.dtype}")
+        min_val, max_val = image_tensor.min().item(), image_tensor.max().item()
+        print(f"DEBUG: Image tensor range: {min_val:.3f} to {max_val:.3f}")
+
         with torch.no_grad():
             prediction = self.model(image_tensor)
             if len(prediction.shape) > 1:
