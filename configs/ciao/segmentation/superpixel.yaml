@@ -1,0 +1,4 @@
+_target_: ciao.components.segmentation.SuperpixelSegmentation
+n_segments: 50
+compactness: 10.0
+algorithm: slic

@@ -1,0 +1,2 @@
+_target_: ciao.components.segmentation.HexagonalSegmentation
+hex_size: 20

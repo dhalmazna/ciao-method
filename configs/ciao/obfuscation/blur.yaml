@@ -1,0 +1,3 @@
+_target_: ciao.components.obfuscation.BlurObfuscation
+kernel_size: 15
+sigma: 5.0
