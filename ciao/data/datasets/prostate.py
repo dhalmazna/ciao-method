@@ -155,7 +155,17 @@ class _ProstateCancerSlideTiles(Dataset[Sample | PredictSample]):
         return len(self.slide_tiles)
 
     def __getitem__(self, idx: int) -> Sample | PredictSample:
-        image, metadata = self.slide_tiles[idx]
+        # Handle different return formats from OpenSlideTilesDataset
+        slide_data = self.slide_tiles[idx]
+
+        if len(slide_data) == 2:
+            image, metadata = slide_data
+        elif len(slide_data) == 3:
+            image, metadata, _ = slide_data  # Third element might be additional info
+        else:
+            # Handle other cases
+            image = slide_data[0]
+            metadata = slide_data[1] if len(slide_data) > 1 else {}
 
         if self.transforms is not None:
             image = self.transforms(image=image)["image"]
@@ -163,7 +173,7 @@ class _ProstateCancerSlideTiles(Dataset[Sample | PredictSample]):
             image = self.to_tensor(image=image)["image"]
 
         if self.include_label:
-            label_value = metadata["cancer"]
+            label_value = metadata.get("cancer", 0)  # Default to 0 if not found
             label = torch.tensor(label_value, dtype=torch.float32).unsqueeze(0)
             return image, label
         else:

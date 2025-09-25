@@ -76,13 +76,22 @@ class _ColorectalCancerSlideTiles(Dataset[Sample]):
         return len(self.slide_tiles)
 
     def __getitem__(self, idx: int) -> Sample:
-        image, metadata = self.slide_tiles[idx]
+        # Handle different return formats from OpenSlideTilesDataset
+        slide_data = self.slide_tiles[idx]
+
+        if len(slide_data) == 2:
+            image, metadata = slide_data
+        elif len(slide_data) == 3:
+            image, metadata, _ = slide_data
+        else:
+            image = slide_data[0]
+            metadata = slide_data[1] if len(slide_data) > 1 else {}
 
         if self.transforms is not None:
             image = self.transforms(image=image)["image"]
         else:
             image = self.to_tensor(image=image)["image"]
 
-        label_value = metadata["cancer"]
+        label_value = metadata.get("cancer", 0)
         label = torch.tensor(label_value, dtype=torch.float32).unsqueeze(0)
         return image, label
